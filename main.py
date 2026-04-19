@@ -1,9 +1,11 @@
 import asyncio
 import logging
 import os
+from collections import defaultdict
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 
+# 🔑 токен берётся из Render Variables
 TOKEN = os.getenv("BOT_TOKEN")
 
 logging.basicConfig(level=logging.INFO)
@@ -11,70 +13,94 @@ logging.basicConfig(level=logging.INFO)
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
-# простая память (пока без базы данных)
-hives = {}
+# 🧠 память ульев
+hives = defaultdict(list)
 
 
+# 🧠 АНАЛИЗ СОСТОЯНИЯ УЛЬЯ
 def analyze(text):
     t = text.lower()
     result = []
 
-    # 📈 развитие семьи
-    if "расплод" in t:
-        result.append("📈 Расплод присутствует — семья развивается")
+    brood = "расплод" in t
+    strong_brood = "много расплода" in t or "сильный расплод" in t
 
-    if "много расплода" in t:
-        result.append("🔥 Сильный расплод — активный рост семьи")
+    honey = "мёд" in t or "мед" in t
+    queen = "матк" in t
+    aggression = "агресс" in t
 
-    # 👑 матка
-    if "матк" in t:
-        result.append("👑 Внимание: проверь матку (наличие/качество)")
-
-    # ⚠️ поведение
-    if "агресс" in t:
-        result.append("⚠️ Агрессия — возможен стресс или проблема с маткой")
+    # 📈 развитие
+    if strong_brood:
+        result.append("🔥 Сильная семья (активный расплод)")
+    elif brood:
+        result.append("📈 Развитие семьи есть")
 
     # 🍯 ресурсы
-    if "мёд" in t or "мед" in t:
-        result.append("🍯 Запасы мёда есть")
+    if honey:
+        result.append("🍯 Есть запасы мёда")
 
-    # 🧠 если ничего не найдено
+    # 👑 матка
+    if queen:
+        result.append("👑 Проверь матку (контроль обязателен)")
+
+    # ⚠️ поведение
+    if aggression:
+        result.append("⚠️ Агрессия — возможен стресс или проблема в семье")
+
+    # 🚨 итоговая оценка
+    if strong_brood and honey:
+        result.append("🟢 Состояние: сильная продуктивная семья")
+    elif brood and not honey:
+        result.append("🟡 Состояние: развивается, нужен контроль кормов")
+    elif aggression:
+        result.append("🔴 Состояние: нестабильная семья")
+
     if not result:
-        result.append("📌 Данные записаны, явных рисков не выявлено")
+        result.append("📌 Данные записаны, отклонений не выявлено")
 
     return "\n".join(result)
 
 
+# 🟢 /start
 @dp.message(Command("start"))
 async def start(message: types.Message):
     await message.answer(
         "🐝 Бот пасеки активен\n\n"
-        "Пиши так:\n"
-        "Улей 3: много расплода, мёд, пчёлы спокойные"
+        "Формат записи:\n"
+        "Улей 3: много расплода, мёд, спокойные пчёлы"
     )
 
 
+# 🐝 обработка сообщений
 @dp.message()
 async def handler(message: types.Message):
     text = message.text
 
     hive = None
+
+    # 📌 определяем номер улья
     if "Улей" in text:
         try:
             hive = int(text.split("Улей")[1].split(":")[0].strip())
         except:
-            pass
+            hive = None
 
+    # 🧠 сохраняем историю
     if hive:
-        hives.setdefault(hive, [])
         hives[hive].append(text)
 
+    # 📊 ответ
     reply = f"🐝 Улей {hive if hive else '?'}\n\n"
     reply += analyze(text)
+
+    # 📈 статистика
+    if hive:
+        reply += f"\n\n📊 Записей по улью: {len(hives[hive])}"
 
     await message.answer(reply)
 
 
+# 🚀 запуск бота
 async def main():
     await dp.start_polling(bot)
 
