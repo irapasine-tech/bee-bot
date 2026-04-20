@@ -1,12 +1,13 @@
 import asyncio
 import os
 import requests
+
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 
 TOKEN = os.getenv("BOT_TOKEN")
 
-API_URL = "https://bee-api.onrender.com"
+API_URL = "https://bee-api-pbw3.onrender.com"  # твой URL
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
@@ -30,10 +31,15 @@ async def handler(message: types.Message):
 
         data = r.json()
 
-        await message.answer(
-            f"🐝 Улей {data['hive']}\n"
-            f"📊 Принято: {data['text']}"
-        )
+        answer = f"""🐝 Улей {data['hive']}
+
+📊 Состояние: {data['score']}/100
+"""
+
+        for a in data["advice"]:
+            answer += f"{a}\n"
+
+        await message.answer(answer)
 
     except Exception as e:
         await message.answer(f"Ошибка API: {e}")
