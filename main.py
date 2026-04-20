@@ -9,7 +9,7 @@ from aiogram.filters import Command
 TOKEN = os.getenv("BOT_TOKEN")
 
 # 🌐 адрес твоего API (ВАЖНО — вставь свой Render URL)
-API_URL = "https://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"
+API_URL = "API_URL = "https://bee-api.onrender.com""
 
 logging.basicConfig(level=logging.INFO)
 
