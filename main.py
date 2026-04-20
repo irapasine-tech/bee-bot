@@ -1,16 +1,12 @@
 import asyncio
-import logging
 import os
 import requests
-
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 
 TOKEN = os.getenv("BOT_TOKEN")
 
 API_URL = "https://bee-api.onrender.com"
-
-logging.basicConfig(level=logging.INFO)
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
@@ -22,29 +18,22 @@ async def start(message: types.Message):
 
 
 @dp.message()
-async def handle(message: types.Message):
-    text = message.text
-
+async def handler(message: types.Message):
     try:
-        response = requests.post(
+        r = requests.post(
             f"{API_URL}/add",
-            json={   # ⚠️ ВАЖНО: НЕ params
+            json={
                 "hive": 3,
-                "text": text
+                "text": message.text
             }
         )
 
-        data = response.json()
+        data = r.json()
 
-        answer = f"""🐝 Улей {data['hive']}
-
-📊 Состояние: {data['score']}/100
-"""
-
-        for a in data["advice"]:
-            answer += f"{a}\n"
-
-        await message.answer(answer)
+        await message.answer(
+            f"🐝 Улей {data['hive']}\n"
+            f"📊 Принято: {data['text']}"
+        )
 
     except Exception as e:
         await message.answer(f"Ошибка API: {e}")
