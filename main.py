@@ -2,14 +2,15 @@ import asyncio
 import logging
 import os
 import requests
+
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 
-# 🔑 токен бота
+# 🔑 токен Telegram бота (Render ENV: BOT_TOKEN)
 TOKEN = os.getenv("BOT_TOKEN")
 
-# 🌐 адрес твоего API (ВАЖНО — вставь свой Render URL)
-API_URL = "API_URL = "https://bee-api.onrender.com""
+# 🌐 URL твоего backend API (bee-api)
+API_URL = "https://bee-api.onrender.com"
 
 logging.basicConfig(level=logging.INFO)
 
@@ -17,99 +18,42 @@ bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
 
-# 💾 сохранение через API
-def save(hive, text):
+# 📊 команда старт
+@dp.message(Command("start"))
+async def start(message: types.Message):
+    await message.answer("🐝 Бот пасеки активен\nНапиши: Улей 3: расплод, мёд")
+
+
+# 📊 анализ улья
+@dp.message()
+async def handle(message: types.Message):
+    text = message.text
+
     try:
         response = requests.post(
             f"{API_URL}/add",
             params={
-                "hive": hive,
+                "hive": 3,
                 "text": text
             }
         )
+
         data = response.json()
-        return data.get("score", 50)
+
+        answer = f"""🐝 Улей {data['hive']}
+
+📊 Состояние: {data['score']}/100
+"""
+
+        for a in data["advice"]:
+            answer += f"{a}\n"
+
+        await message.answer(answer)
 
     except Exception as e:
-        print("Ошибка API:", e)
-        return 50
+        await message.answer(f"Ошибка API: {e}")
 
 
-# 📊 получить статистику
-def get_stats():
-    try:
-        response = requests.get(f"{API_URL}/hives")
-        return response.json()
-    except:
-        return []
-
-
-# 🟢 старт
-@dp.message(Command("start"))
-async def start(message: types.Message):
-    await message.answer(
-        "🐝 Бот пасеки v9\n\n"
-        "Пиши:\n"
-        "Улей 3: расплод, мёд\n\n"
-        "Команды:\n"
-        "/stats"
-    )
-
-
-# 📊 статистика
-@dp.message(Command("stats"))
-async def stats(message: types.Message):
-    data = get_stats()
-
-    if not data:
-        await message.answer("📭 нет данных")
-        return
-
-    text = "📊 Пасека:\n\n"
-
-    for hive, score in data:
-        text += f"Улей {hive} → {score}\n"
-
-    await message.answer(text)
-
-
-# 🐝 основной обработчик
-@dp.message()
-async def handler(message: types.Message):
-    text = message.text
-
-    hive = None
-
-    # 📌 определяем номер улья
-    if "Улей" in text:
-        try:
-            hive = int(text.split("Улей")[1].split(":")[0].strip())
-        except:
-            hive = None
-
-    if not hive:
-        await message.answer("Напиши: Улей 3: ...")
-        return
-
-    # 💾 отправляем в API
-    score = save(hive, text)
-
-    reply = f"🐝 Улей {hive}\n\n"
-    reply += f"📊 Состояние: {score}/100\n"
-
-    if score >= 80:
-        reply += "🟢 Сильная семья"
-    elif score >= 60:
-        reply += "🟡 Нормальная семья"
-    elif score >= 40:
-        reply += "🟠 Ослабленная семья"
-    else:
-        reply += "🔴 Критическое состояние"
-
-    await message.answer(reply)
-
-
-# 🚀 запуск
 async def main():
     await dp.start_polling(bot)
 
